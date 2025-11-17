@@ -6,14 +6,18 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Tymon\JWTAuth\Contracts\JWTSubject;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
-use Carbon\Carbon;
 
 class User extends Authenticatable implements JWTSubject
 {
     use HasFactory, Notifiable;
+
+    /*************************
+     * Roles
+     *************************/
+    public const ROLE_ADMIN = 'admin';
+    public const ROLE_MEMBER = 'member';
 
     /*************************
      * Mass Assignment
@@ -22,12 +26,11 @@ class User extends Authenticatable implements JWTSubject
         'name',
         'email',
         'password',
-        'balance',
-        'account_number',
-        'bank_code',
         'bank_name',
+        'bank_code',
+        'account_number',
         'account_name',
-        'uid',
+        'role', // 'admin' or 'member'
         'verification_code',
         'verification_code_expiry',
         'password_reset_code',
@@ -40,8 +43,6 @@ class User extends Authenticatable implements JWTSubject
     protected $hidden = [
         'password',
         'remember_token',
-        'account_number',
-        'bank_code',
         'verification_code',
         'password_reset_code',
     ];
@@ -50,23 +51,11 @@ class User extends Authenticatable implements JWTSubject
      * Type Casting
      *************************/
     protected $casts = [
-        'email_verified_at'              => 'datetime',
-        'password'                       => 'hashed',
-        'verification_code_expiry'       => 'datetime',
-        'password_reset_code_expires_at' => 'datetime',
+        'email_verified_at'               => 'datetime',
+        'password'                        => 'hashed',
+        'verification_code_expiry'        => 'datetime',
+        'password_reset_code_expires_at'  => 'datetime',
     ];
-
-    /*************************
-     * Auto UID Generator
-     *************************/
-    protected static function booted()
-    {
-        static::creating(function (User $user) {
-            do {
-                $user->uid = "USR-" . strtoupper(Str::random(6));
-            } while (self::where('uid', $user->uid)->exists());
-        });
-    }
 
     /*************************
      * JWT Support
@@ -82,11 +71,11 @@ class User extends Authenticatable implements JWTSubject
     }
 
     /*************************
-     * Email Verification Logic
+     * Email Verification
      *************************/
     public function sendEmailVerificationCode(): void
     {
-        $this->verification_code = Str::random(6);
+        $this->verification_code = rand(100000, 999999); // 6-digit numeric code
         $this->verification_code_expiry = now()->addMinutes(30);
         $this->save();
 
@@ -98,7 +87,12 @@ class User extends Authenticatable implements JWTSubject
         }
     }
 
-    public function verifyEmail(string $code): bool
+    public function hasVerifiedEmail(): bool
+    {
+        return !is_null($this->email_verified_at);
+    }
+
+    public function markEmailAsVerified(string $code): bool
     {
         if (
             $this->verification_code === $code &&
@@ -106,8 +100,8 @@ class User extends Authenticatable implements JWTSubject
             now()->lessThanOrEqualTo($this->verification_code_expiry)
         ) {
             $this->update([
-                'email_verified_at'       => now(),
-                'verification_code'       => null,
+                'email_verified_at'        => now(),
+                'verification_code'        => null,
                 'verification_code_expiry' => null,
             ]);
 
@@ -118,20 +112,15 @@ class User extends Authenticatable implements JWTSubject
     }
 
     /*************************
-     * Wallet Logic
+     * Role Helpers
      *************************/
-    public function deposit(float|int $amount): void
+    public function isAdmin(): bool
     {
-        $this->increment('balance', $amount);
+        return $this->role === self::ROLE_ADMIN;
     }
 
-    public function withdraw(float|int $amount): bool
+    public function isMember(): bool
     {
-        if ($this->balance < $amount) {
-            return false;
-        }
-
-        $this->decrement('balance', $amount);
-        return true;
+        return $this->role === self::ROLE_MEMBER;
     }
 }

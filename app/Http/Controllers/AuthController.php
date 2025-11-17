@@ -2,360 +2,196 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Auth\RegisterRequest;
+use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\PasswordRequest;
+use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log; 
 use Illuminate\Support\Facades\Hash;
-use Tymon\JWTAuth\Facades\JWTAuth;
-use Tymon\JWTAuth\Exceptions\JWTException;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-use App\Mail\VerifyEmailMail; 
+use Tymon\JWTAuth\Facades\JWTAuth;
+use App\Mail\VerifyEmailMail;
 use App\Mail\ResetPasswordEmail;
+use DB;
 
 class AuthController extends Controller
 {
-    // -----------------------
-    // Helper Methods
-    // -----------------------
-    
-    private function sendSuccessResponse($data = [], $message = 'Success', $status = 200)
-    {
-        return response()->json([
-            'success' => true,
-            'message' => $message,
-            'data' => $data,
-        ], $status);
+    protected function success($data = [], $msg = 'Success', $status = 200) {
+        return response()->json(['success' => true, 'message' => $msg, 'data' => $data], $status);
     }
 
-    private function sendErrorResponse($message, $status = 400, $errors = [])
-    {
-        return response()->json([
-            'success' => false,
-            'message' => $message,
-            'errors' => $errors,
-        ], $status);
+    protected function error($msg = 'Error', $status = 400, $errors = []) {
+        return response()->json(['success' => false, 'message' => $msg, 'errors' => $errors], $status);
     }
 
-    private function getUserByEmail(string $email)
+    public function register(RegisterRequest $request)
     {
-        return User::where('email', $email)->first();
-    }
-
-    private function generateVerificationCode(): string
-    {
-        return (string) random_int(100000, 999999);
-    }
-
-    // -----------------------
-    // Auth Methods
-    // -----------------------
-
-    public function me()
-    {
-        try {
-            $user = auth()->user();
-            if (!$user) {
-                return $this->sendErrorResponse('Unauthorized', 401);
-            }
-
-            return $this->sendSuccessResponse([
-                'id' => $user->id,
-                'uid' => $user->uid,
-                'name' => $user->name,
-                'email' => $user->email,
-                'email_verified_at' => $user->email_verified_at,
-                'transaction_pin' => $user->transaction_pin,
-                'is_admin' => $user->is_admin,
-                'created_at' => $user->created_at,
-                'updated_at' => $user->updated_at,
-                'balance' => $user->balance,
-                'bank_name' => $user->bank_name,
-                'bank_code' => $user->bank_code,
-                'account_number' => $user->account_number,
-                'account_name' => $user->account_name,
-            ]);
-        } catch (\Exception $e) {
-            Log::error('❌ Error fetching user profile', ['error' => $e->getMessage()]);
-            return $this->sendErrorResponse('Could not fetch user', 500, [
-                'exception' => config('app.debug') ? $e->getMessage() : null
-            ]);
-        }
-    }
-
-    public function register(Request $request)
-    {
-        try {
-            $request->validate([
-                'name' => 'required|string|max:255',
-                'email' => 'required|string|email|max:255|unique:users',
-                'password' => [
-                    'required', 'string', 'min:8', 'confirmed',
-                    'regex:/[A-Z]/', 'regex:/[a-z]/',
-                    'regex:/[0-9]/', 'regex:/[@$!%*?&#]/',
-                ],
-            ]);
-        } catch (ValidationException $e) {
-            return $this->sendErrorResponse('Validation errors occurred', 422, $e->validator->errors());
-        }
-
+        DB::beginTransaction();
         try {
             $user = User::create([
                 'name' => $request->name,
                 'email' => $request->email,
                 'password' => Hash::make($request->password),
+                'role' => User::ROLE_MEMBER,
             ]);
 
-            $verificationCode = $this->generateVerificationCode();
-            $user->verification_code = $verificationCode;
-            $user->save();
-
-            Mail::to($user->email)->send(new VerifyEmailMail($user, $verificationCode));
+            $user->sendEmailVerificationCode();
 
             $token = JWTAuth::fromUser($user);
+            DB::commit();
 
-            return $this->sendSuccessResponse([
-                'user' => $user,
-                'token' => $token
-            ], 'Registration successful. Please check your email for the verification code.', 201);
+            return $this->success(['user' => new UserResource($user), 'token' => $token], 'Registration successful', 201);
         } catch (\Exception $e) {
-            return $this->sendErrorResponse('Registration failed. Please try again later.', 500, [
-                'exception' => $e->getMessage()
-            ]);
+            DB::rollBack();
+            Log::error('Registration failed', ['err' => $e->getMessage()]);
+            return $this->error('Registration failed', 500);
         }
     }
 
-    public function login(Request $request)
+    public function login(LoginRequest $request)
     {
-        try {
-            $request->validate([
-                'email' => 'required|string|email|max:255',
-                'password' => 'required|string',
-            ]);
-        } catch (ValidationException $e) {
-            return $this->sendErrorResponse('Validation errors occurred', 422, $e->validator->errors());
-        }
+        $credentials = $request->only('email', 'password');
+        $user = User::where('email', $request->email)->first();
 
-        $user = $this->getUserByEmail($request->email);
-        if (!$user) {
-            return $this->sendErrorResponse('User not found', 404);
-        }
-
-        if (!$user->hasVerifiedEmail()) {
-            return $this->sendErrorResponse('Please verify your email before logging in.', 403);
-        }
+        if (!$user) return $this->error('Invalid credentials', 401);
+        if (!$user->hasVerifiedEmail()) return $this->error('Please verify your email before logging in.', 403);
 
         try {
-            if (!$token = JWTAuth::attempt($request->only('email', 'password'))) {
-                return $this->sendErrorResponse('Invalid credentials', 401);
+            if (!$token = auth('api')->attempt($credentials)) {
+                return $this->error('Invalid credentials', 401);
             }
-        } catch (JWTException $e) {
-            return $this->sendErrorResponse('Could not create token', 500, ['exception' => $e->getMessage()]);
+            return $this->success(['token' => $token, 'user' => new UserResource($user)], 'Login successful');
+        } catch (\Exception $e) {
+            Log::error('Login JWT error', ['err' => $e->getMessage()]);
+            return $this->error('Could not create token', 500);
         }
+    }
 
-        return $this->sendSuccessResponse(['token' => $token], 'Login successful');
+    public function me(Request $request)
+    {
+        $user = auth('api')->user();
+        if (!$user) return $this->error('Unauthorized', 401);
+        return $this->success(new UserResource($user));
     }
 
     public function logout()
     {
         try {
-            if (!JWTAuth::getToken()) {
-                return $this->sendErrorResponse('Token not provided', 400);
-            }
-            JWTAuth::invalidate(JWTAuth::getToken());
-            return $this->sendSuccessResponse([], 'Successfully logged out');
-        } catch (JWTException $e) {
-            return $this->sendErrorResponse('Could not log out', 500, ['exception' => $e->getMessage()]);
+            auth('api')->logout();
+            return $this->success([], 'Logged out');
+        } catch (\Exception $e) {
+            Log::error('Logout error', ['err' => $e->getMessage()]);
+            return $this->error('Logout failed', 500);
         }
     }
 
     public function refresh()
     {
         try {
-            if (!JWTAuth::getToken()) {
-                return $this->sendErrorResponse('Token not provided', 400);
-            }
-            $newToken = JWTAuth::refresh(JWTAuth::getToken());
-            return $this->sendSuccessResponse(['token' => $newToken], 'Token refreshed successfully');
-        } catch (JWTException $e) {
-            return $this->sendErrorResponse('Could not refresh token', 500, ['exception' => $e->getMessage()]);
+            $token = auth('api')->refresh();
+            return $this->success(['token' => $token], 'Token refreshed');
+        } catch (\Exception $e) {
+            return $this->error('Could not refresh', 500);
         }
     }
 
-    // -----------------------
-    // Password Reset
-    // -----------------------
-
-    public function sendPasswordResetCode(Request $request)
+    public function sendPasswordResetCode(PasswordRequest $request)
     {
-        $request->validate(['email' => 'required|string|email']);
+        $user = User::where('email', $request->email)->first();
+        if (!$user) return $this->error('User not found', 404);
 
-        $user = $this->getUserByEmail($request->email);
-        if (!$user) return $this->sendErrorResponse('User not found', 404);
-
-        $resetCode = $this->generateVerificationCode();
-        $user->password_reset_code = $resetCode;
+        $code = rand(100000, 999999);
+        $user->password_reset_code = $code;
         $user->password_reset_code_expires_at = now()->addMinutes(30);
         $user->save();
 
         try {
-            Mail::to($user->email)->send(new ResetPasswordEmail($user, $resetCode));
+            Mail::to($user->email)->send(new ResetPasswordEmail($user, $code));
         } catch (\Exception $e) {
-            return $this->sendErrorResponse('Failed to send password reset email.', 500, ['exception' => $e->getMessage()]);
+            Log::warning('Reset mail failed: ' . $e->getMessage());
         }
 
-        return $this->sendSuccessResponse([], 'Password reset code sent to your email.');
+        return $this->success([], 'Password reset code sent');
     }
 
-    public function verifyResetCode(Request $request)
+    public function verifyResetCode(PasswordRequest $request)
     {
-        $request->validate([
-            'email' => 'required|string|email',
-            'reset_code' => 'required|string|size:6',
-        ]);
+        $request->validate(['reset_code' => 'required|string|size:6']);
 
-        $user = $this->getUserByEmail($request->email);
-        if (!$user) return $this->sendErrorResponse('User not found', 404);
+        $user = User::where('email', $request->email)->first();
+        if (!$user) return $this->error('User not found', 404);
 
         if ($user->password_reset_code !== $request->reset_code || $user->password_reset_code_expires_at->isPast()) {
-            return $this->sendErrorResponse('Invalid or expired reset code', 400);
+            return $this->error('Invalid or expired code', 400);
         }
 
         $user->password_reset_code = null;
         $user->password_reset_code_expires_at = null;
         $user->save();
 
-        return $this->sendSuccessResponse([], 'Reset code verified. You can now reset your password.');
+        return $this->success([], 'Reset code verified');
     }
 
-    public function resetPassword(Request $request)
+    public function resetPassword(PasswordRequest $request)
     {
-        try {
-            $request->validate([
-                'email' => 'required|string|email',
-                'password' => [
-                    'required', 'string', 'min:8', 'confirmed',
-                    'regex:/[A-Z]/','regex:/[a-z]/','regex:/[0-9]/','regex:/[@$!%*?&#]/'
-                ],
-            ], [
-                'password.min' => 'The password must be at least 8 characters long.',
-                'password.regex' => 'Password must include at least one uppercase, lowercase, number, and special character.',
-                'password.confirmed' => 'The password confirmation does not match.',
-            ]);
-        } catch (ValidationException $e) {
-            return $this->sendErrorResponse('Password validation errors occurred', 422, $e->validator->errors());
-        }
+        $request->validate(['password' => 'required|confirmed|min:8']);
 
-        $user = $this->getUserByEmail($request->email);
-        if (!$user) return $this->sendErrorResponse('No account found with this email.', 404);
+        $user = User::where('email', $request->email)->first();
+        if (!$user) return $this->error('User not found', 404);
 
         if ($user->password_reset_code !== null || $user->password_reset_code_expires_at !== null) {
-            return $this->sendErrorResponse('Please verify the reset code before setting a new password.', 400);
+            return $this->error('Please verify the reset code first', 400);
         }
 
         $user->password = Hash::make($request->password);
         $user->save();
 
-        // Optionally: Invalidate all existing JWTs here
-
-        return $this->sendSuccessResponse([], 'Password has been reset successfully.');
+        return $this->success([], 'Password reset successful');
     }
 
-    // -----------------------
-    // Email Verification
-    // -----------------------
+    public function changePassword(PasswordRequest $request)
+    {
+        $user = auth('api')->user();
+        if (!$user) return $this->error('Unauthorized', 401);
+
+        $request->validate([
+            'current_password' => 'required|string',
+            'new_password' => 'required|confirmed|min:8'
+        ]);
+
+        if (!Hash::check($request->current_password, $user->password)) {
+            return $this->error('Current password incorrect', 400);
+        }
+
+        $user->password = Hash::make($request->new_password);
+        $user->save();
+
+        return $this->success([], 'Password changed');
+    }
 
     public function verifyEmailCode(Request $request)
     {
-        $request->validate([
-            'email' => 'required|string|email',
-            'verification_code' => 'required|string|size:6',
-        ]);
+        $request->validate(['email' => 'required|email', 'verification_code' => 'required|string|size:6']);
+        $user = User::where('email', $request->email)->first();
+        if (!$user) return $this->error('User not found', 404);
 
-        $user = $this->getUserByEmail($request->email);
-        if (!$user) return $this->sendErrorResponse('User not found', 404);
-
-        if ($user->verification_code !== $request->verification_code) {
-            return $this->sendErrorResponse('Invalid verification code.', 400);
+        if (!$user->markEmailAsVerified($request->verification_code)) {
+            return $this->error('Invalid or expired verification code', 400);
         }
 
-        $user->markEmailAsVerified();
-        $user->verification_code = null;
-        $user->save();
-
-        Log::info("User email verified: {$user->email}");
-
-        return $this->sendSuccessResponse([], 'Email verified successfully.');
+        return $this->success([], 'Email verified');
     }
 
     public function resendVerificationEmail(Request $request)
     {
-        $request->validate(['email' => 'required|string|email']);
+        $request->validate(['email' => 'required|email']);
+        $user = User::where('email', $request->email)->first();
+        if (!$user) return $this->error('User not found', 404);
+        if ($user->hasVerifiedEmail()) return $this->error('Email already verified', 400);
 
-        $user = $this->getUserByEmail($request->email);
-        if (!$user) return $this->sendErrorResponse('User not found', 404);
-
-        if ($user->hasVerifiedEmail()) {
-            return $this->sendErrorResponse('Your email is already verified.', 400);
-        }
-
-        $verificationCode = $this->generateVerificationCode();
-        $user->verification_code = $verificationCode;
-        $user->save();
-
-        try {
-            Mail::to($user->email)->send(new VerifyEmailMail($user, $verificationCode));
-        } catch (\Exception $e) {
-            return $this->sendErrorResponse('Failed to send verification email.', 500, ['exception' => $e->getMessage()]);
-        }
-
-        return $this->sendSuccessResponse([], 'A new verification code has been sent to your email.');
-    }
-
-    // -----------------------
-    // Password Change
-    // -----------------------
-
-    public function changePassword(Request $request) 
-    {
-        $user = $request->user();
-        if (!$user) {
-            Log::warning('Unauthenticated password change attempt');
-            return $this->sendErrorResponse('Unauthenticated.', 401);
-        }
-
-        try {
-            $request->validate([
-                'current_password' => 'required|string',
-                'new_password' => [
-                    'required','string','min:8','confirmed',
-                    'regex:/[A-Z]/','regex:/[a-z]/','regex:/[0-9]/','regex:/[@$!%*?&#]/'
-                ],
-            ], [
-                'new_password.min' => 'The new password must be at least 8 characters long.',
-                'new_password.regex' => 'The new password must include at least one uppercase letter, one lowercase letter, one number, and one special character.',
-                'new_password.confirmed' => 'The new password confirmation does not match.',
-            ]);
-        } catch (ValidationException $e) {
-            return $this->sendErrorResponse('Password validation errors occurred', 422, $e->validator->errors());
-        }
-
-        try {
-            if (!Hash::check($request->current_password, $user->password)) {
-                return $this->sendErrorResponse('Current password is incorrect.', 400);
-            }
-
-            if (Hash::check($request->new_password, $user->password)) {
-                return $this->sendErrorResponse('New password cannot be the same as your current password.', 400);
-            }
-
-            $user->password = Hash::make($request->new_password);
-            $user->save();
-
-            return $this->sendSuccessResponse([], 'Password has been changed successfully.');
-        } catch (\Exception $e) {
-            Log::error('Error while changing password', ['user_id' => $user->id ?? null, 'exception' => $e->getMessage()]);
-            return $this->sendErrorResponse('An unexpected error occurred while changing the password.', 500);
-        }
+        $user->sendEmailVerificationCode();
+        return $this->success([], 'Verification code resent');
     }
 }

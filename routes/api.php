@@ -2,84 +2,156 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\DepositController;
-use App\Http\Controllers\UserController;
-use App\Http\Controllers\WithdrawalController;
-use App\Http\Controllers\NotificationController;
-use App\Http\Middleware\CheckTransactionPin;
+use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\AdminUserController;
+use App\Http\Controllers\Admin\AdminNewsController;
+use App\Http\Controllers\Admin\AdminEventController;
+use App\Http\Controllers\Admin\AdminGalleryController;
+use App\Http\Controllers\Admin\AdminProjectController;
+use App\Http\Controllers\Admin\AdminResourceController;
+use App\Http\Controllers\Admin\AdminPartnerController;
+use App\Http\Controllers\Public\NewsController;
+use App\Http\Controllers\Public\EventController;
+use App\Http\Controllers\Public\GalleryController;
+use App\Http\Controllers\Public\ProjectController;
+use App\Http\Controllers\Public\ResourceController;
+use App\Http\Controllers\Public\PartnerController;
 
-// Test route
-Route::get('/test', function () {
-    return response()->json(['message' => 'API is running']);
-});
+/*
+|--------------------------------------------------------------------------
+| AUTH ROUTES
+|--------------------------------------------------------------------------
+*/
+Route::prefix('auth')->group(function () {
 
-// ------------------------
-// Public Routes
-// ------------------------
-Route::post('/register', [AuthController::class, 'register']); // User registration
-Route::post('/login', [AuthController::class, 'login']); // Login route (JWT)
+    // Registration & Login
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/login', [AuthController::class, 'login']);
 
-// Email verification
-Route::post('/email/verify/code', [AuthController::class, 'verifyEmailCode']);
-Route::post('/email/resend-verification', [AuthController::class, 'resendVerificationEmail']);
+    // Email verification
+    Route::post('/email/verify', [AuthController::class, 'verifyEmailCode']);
+    Route::post('/email/resend', [AuthController::class, 'resendVerificationEmail']);
 
-// Password reset
-Route::prefix('password')->group(function () {
-    Route::post('/reset/code', [AuthController::class, 'sendPasswordResetCode']); // Send reset code to email
-    Route::post('/reset/verify', [AuthController::class, 'verifyResetCode']); // Verify reset code
-    Route::post('/reset', [AuthController::class, 'resetPassword']); // Reset password with code
-});
+    // Password reset
+    Route::post('/password/request', [AuthController::class, 'sendPasswordResetCode']);
+    Route::post('/password/verify', [AuthController::class, 'verifyResetCode']);
+    Route::post('/password/reset', [AuthController::class, 'resetPassword']);
 
-// Deposit callback (public & signed)
-Route::get('/deposit/callback', [DepositController::class, 'handleDepositCallback'])->name('deposit.callback');
-
-// Paystack webhook (public)
-Route::post('/paystack/webhook', [WithdrawalController::class, 'handlePaystackCallback']);
-
-// ------------------------
-// Protected Routes (JWT)
-// ------------------------
-Route::middleware('jwt.auth')->group(function () {
-
-    // Current authenticated user
-    Route::get('/me', [AuthController::class, 'me']);
-    Route::post('/refresh', [AuthController::class, 'refresh']);
-
-    // Routes requiring email verification
-    Route::middleware('verified')->group(function () {
-
-        // Authentication
+    // Must be authenticated
+    Route::middleware('jwt.auth')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
-        Route::post('/user/change-password', [AuthController::class, 'changePassword']);
-
-        // User stats & transactions
-        Route::get('/user/stats', [UserController::class, 'getUserStats']);
-        Route::get('/transactions/user', [UserController::class, 'getUserTransactions']);
-
-        // Transaction PIN
-        Route::post('/pin/forgot', [UserController::class, 'sendPinResetCode']);
-        Route::post('/pin/verify-code', [UserController::class, 'verifyPinResetCode']);
-        Route::post('/pin/reset', [UserController::class, 'resetTransactionPin']);
-        Route::post('/pin/set', [UserController::class, 'setTransactionPin']);
-        Route::post('/pin/update', [UserController::class, 'updateTransactionPin']);
-
-        // Deposits & Withdrawals
-        Route::post('/deposit', [DepositController::class, 'initiateDeposit']);
-        Route::post('/withdraw', [WithdrawalController::class, 'requestWithdrawal'])
-            ->middleware(CheckTransactionPin::class);
-        Route::get('/withdrawals/{reference}', [WithdrawalController::class, 'getWithdrawalStatus']);
-        Route::get('/withdrawal/retry', [WithdrawalController::class, 'retryPendingWithdrawals']);
-
-        // Bank details
-        Route::put('/user/bank-details', [UserController::class, 'updateBankDetails']);
-        Route::get('/paystack/banks', [UserController::class, 'getBanks']);
-        Route::post('/paystack/resolve-account', [UserController::class, 'resolveAccount']);
-
-        // Notifications
-        Route::get('/notifications', [NotificationController::class, 'getNotifications']);
-        Route::get('/notifications/unread', [NotificationController::class, 'getUnreadNotifications']);
-        Route::post('/notifications/read', [NotificationController::class, 'markAllAsRead']);
+        Route::post('/refresh', [AuthController::class, 'refresh']);
+        Route::get('/me', [AuthController::class, 'me']);
+        Route::post('/password/change', [AuthController::class, 'changePassword']);
     });
 });
 
-?>
+
+/*
+|--------------------------------------------------------------------------
+| PUBLIC CONTENT ROUTES
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/news', [NewsController::class, 'index']);
+Route::get('/news/{id}', [NewsController::class, 'show']);
+
+Route::get('/events', [EventController::class, 'index']);
+Route::get('/events/{id}', [EventController::class, 'show']);
+
+Route::get('/gallery', [GalleryController::class, 'index']);
+Route::get('/gallery/{id}', [GalleryController::class, 'show']);
+
+Route::get('/projects', [ProjectController::class, 'index']);
+Route::get('/projects/{id}', [ProjectController::class, 'show']);
+
+Route::get('/resources', [ResourceController::class, 'index']);
+
+Route::get('/partners', [PartnerController::class, 'index']);
+
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN ROUTES (JWT + Admin Role Required)
+|--------------------------------------------------------------------------
+*/
+
+Route::prefix('admin')
+    ->middleware(['jwt.auth', 'is_admin'])
+    ->group(function () {
+
+        // Dashboard Stats
+        Route::get('/dashboard/stats', [AdminDashboardController::class, 'stats']);
+
+        /*
+        |--------------------------------------------------------------------------
+        | ADMIN - USERS
+        |--------------------------------------------------------------------------
+        */
+        Route::get('/users', [AdminUserController::class, 'index']);
+        Route::get('/users/{id}', [AdminUserController::class, 'show']);
+        Route::put('/users/{id}', [AdminUserController::class, 'update']);
+        Route::delete('/users/{id}', [AdminUserController::class, 'destroy']);
+
+        /*
+        |--------------------------------------------------------------------------
+        | ADMIN - NEWS
+        |--------------------------------------------------------------------------
+        */
+        Route::get('/news', [AdminNewsController::class, 'index']);
+        Route::post('/news', [AdminNewsController::class, 'store']);
+        Route::get('/news/{id}', [AdminNewsController::class, 'show']);
+        Route::put('/news/{id}', [AdminNewsController::class, 'update']);
+        Route::delete('/news/{id}', [AdminNewsController::class, 'destroy']);
+
+        /*
+        |--------------------------------------------------------------------------
+        | ADMIN - EVENTS
+        |--------------------------------------------------------------------------
+        */
+        Route::get('/events', [AdminEventController::class, 'index']);
+        Route::post('/events', [AdminEventController::class, 'store']);
+        Route::get('/events/{id}', [AdminEventController::class, 'show']);
+        Route::put('/events/{id}', [AdminEventController::class, 'update']);
+        Route::delete('/events/{id}', [AdminEventController::class, 'destroy']);
+
+        /*
+        |--------------------------------------------------------------------------
+        | ADMIN - GALLERY
+        |--------------------------------------------------------------------------
+        */
+        Route::get('/gallery', [AdminGalleryController::class, 'index']);
+        Route::post('/gallery', [AdminGalleryController::class, 'store']); // image upload
+        Route::delete('/gallery/{id}', [AdminGalleryController::class, 'destroy']);
+
+        /*
+        |--------------------------------------------------------------------------
+        | ADMIN - PROJECTS
+        |--------------------------------------------------------------------------
+        */
+        Route::get('/projects', [AdminProjectController::class, 'index']);
+        Route::post('/projects', [AdminProjectController::class, 'store']);
+        Route::get('/projects/{id}', [AdminProjectController::class, 'show']);
+        Route::put('/projects/{id}', [AdminProjectController::class, 'update']);
+        Route::delete('/projects/{id}', [AdminProjectController::class, 'destroy']);
+
+        /*
+        |--------------------------------------------------------------------------
+        | ADMIN - RESOURCES
+        |--------------------------------------------------------------------------
+        */
+        Route::get('/resources', [AdminResourceController::class, 'index']);
+        Route::post('/resources', [AdminResourceController::class, 'store']); // file upload
+        Route::delete('/resources/{id}', [AdminResourceController::class, 'destroy']);
+
+        /*
+        |--------------------------------------------------------------------------
+        | ADMIN - PARTNERS
+        |--------------------------------------------------------------------------
+        */
+        Route::get('/partners', [AdminPartnerController::class, 'index']);
+        Route::post('/partners', [AdminPartnerController::class, 'store']);
+        Route::put('/partners/{id}', [AdminPartnerController::class, 'update']);
+        Route::delete('/partners/{id}', [AdminPartnerController::class, 'destroy']);
+    });
+

@@ -17,6 +17,11 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+            $table->string('role')->default('member'); // admin | member
+            $table->string('verification_code')->nullable(); // To store the verification code
+            $table->timestamp('verification_code_expiry')->nullable(); // Store the expiry time
+            $table->string('password_reset_code', 6)->nullable();
+            $table->timestamp('password_reset_code_expires_at')->nullable();
             $table->rememberToken();
             $table->timestamps();
         });
