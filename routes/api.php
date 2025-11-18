@@ -2,20 +2,20 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\Admin\AdminDashboardController;
-use App\Http\Controllers\Admin\AdminUserController;
-use App\Http\Controllers\Admin\AdminNewsController;
-use App\Http\Controllers\Admin\AdminEventController;
-use App\Http\Controllers\Admin\AdminGalleryController;
-use App\Http\Controllers\Admin\AdminProjectController;
-use App\Http\Controllers\Admin\AdminResourceController;
-use App\Http\Controllers\Admin\AdminPartnerController;
-use App\Http\Controllers\Public\NewsController;
-use App\Http\Controllers\Public\EventController;
-use App\Http\Controllers\Public\GalleryController;
-use App\Http\Controllers\Public\ProjectController;
-use App\Http\Controllers\Public\ResourceController;
-use App\Http\Controllers\Public\PartnerController;
+use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\AdminUserController;
+use App\Http\Controllers\AdminNewsController;
+use App\Http\Controllers\AdminEventController;
+use App\Http\Controllers\AdminGalleryController;
+use App\Http\Controllers\AdminProjectController;
+use App\Http\Controllers\AdminResourceController;
+use App\Http\Controllers\AdminPartnerController;
+use App\Http\Controllers\NewsController;
+use App\Http\Controllers\EventController;
+use App\Http\Controllers\GalleryController;
+use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\ResourceController;
+use App\Http\Controllers\PartnerController;
 
 /*
 |--------------------------------------------------------------------------

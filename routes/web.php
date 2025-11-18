@@ -2,9 +2,6 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome'); 
-});
 
 // Route for storage link
 Route::get('storage/{path}', 'StorageController@show')->name('storage.local');

@@ -6,27 +6,32 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
-class RegisterRequest extends FormRequest
+class ChangePasswordRequest extends FormRequest
 {
     public function authorize() { return true; }
 
     public function rules()
     {
         return [
-            'name' => 'required|string|max:255',
-            'email'=> 'required|email|max:255|unique:users,email',
-            'password'=> [
-                'required','string','min:8','confirmed',
-                'regex:/[A-Z]/','regex:/[a-z]/','regex:/[0-9]/','regex:/[@$!%*?&#]/'
-            ]
+            'current_password' => 'required|string',
+            'new_password' => [
+                'required',
+                'string',
+                'confirmed',
+                'min:8',
+                'regex:/[A-Z]/',
+                'regex:/[a-z]/',
+                'regex:/[0-9]/',
+                'regex:/[@$!%*?&#]/'
+            ],
         ];
     }
 
     public function messages()
     {
         return [
-            'password.regex' => 'Password must include uppercase, lowercase, number and special character.',
-            'password.confirmed' => 'Password confirmation must match password.'
+            'new_password.regex' => 'New password must include uppercase, lowercase, number, and special character.',
+            'new_password.confirmed' => 'Password confirmation must match new password.'
         ];
     }
 

@@ -10,7 +10,6 @@ class UserResource extends JsonResource
     {
         return [
             'id'=>$this->id,
-            'uid'=>$this->uid ?? null,
             'name'=>$this->name,
             'email'=>$this->email,
             'role'=>$this->role ?? ($this->is_admin ? 'admin' : 'member'),

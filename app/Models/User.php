@@ -35,6 +35,10 @@ class User extends Authenticatable implements JWTSubject
         'verification_code_expiry',
         'password_reset_code',
         'password_reset_code_expires_at',
+        'email_verified_at',
+        'remember_token',
+        'created_at',
+        'updated_at',
     ];
 
     /*************************
@@ -92,7 +96,7 @@ class User extends Authenticatable implements JWTSubject
         return !is_null($this->email_verified_at);
     }
 
-    public function markEmailAsVerified(string $code): bool
+    public function verifyEmailCode(string $code): bool
     {
         if (
             $this->verification_code === $code &&
