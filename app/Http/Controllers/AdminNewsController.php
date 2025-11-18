@@ -23,58 +23,124 @@ class AdminNewsController extends Controller
     public function store(StoreNewsRequest $request)
     {
         DB::beginTransaction();
+
         try {
-            $image = $request->hasFile('image') ? $request->file('image')->store('news','public') : null;
-            $slug = Str::slug($request->title).'-'.Str::random(6);
+            $image = $request->hasFile('image')
+                ? $request->file('image')->store('news', 'public')
+                : null;
+
+            $slug = Str::slug($request->title) . '-' . Str::random(6);
+
+            // Cast boolean safely
+            $isPublished = $request->boolean('is_published');
+
             $news = News::create([
-                'title'=>$request->title,
-                'slug'=>$slug,
-                'body'=>$request->body,
-                'image'=>$image,
-                'published'=>$request->boolean('published', false),
-                'published_at'=>$request->published ? ($request->published_at ?? now()) : null,
+                'title'         => $request->title,
+                'slug'          => $slug,
+                'content'       => $request->content,
+                'image'         => $image,
+                'is_published'  => $isPublished,
+                'published_at'  => $isPublished
+                                    ? ($request->published_at ?? now())
+                                    : null,
             ]);
+
             DB::commit();
-            Log::info('News created', ['admin'=>auth('api')->id(),'news'=>$news->id]);
+
+            Log::info('News created', [
+                'admin' => auth('api')->id(),
+                'news'  => $news->id
+            ]);
+
             return new NewsResource($news);
+
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('News store failed', ['err'=>$e->getMessage()]);
-            return response()->json(['success'=>false,'message'=>'Failed to create news'],500);
+            Log::error('News store failed', ['err' => $e->getMessage()]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to create news'
+            ], 500);
         }
     }
 
-    public function show($id) { return new NewsResource(News::findOrFail($id)); }
+    public function show($id)
+    {
+        return new NewsResource(News::findOrFail($id));
+    }
 
     public function update(UpdateNewsRequest $request, $id)
     {
         $news = News::findOrFail($id);
+
         DB::beginTransaction();
+
         try {
+
+            // Handle image replacement
             if ($request->hasFile('image')) {
-                if ($news->image) Storage::disk('public')->delete($news->image);
-                $news->image = $request->file('image')->store('news','public');
+                if ($news->image) {
+                    Storage::disk('public')->delete($news->image);
+                }
+
+                $news->image = $request->file('image')->store('news', 'public');
             }
-            if ($request->filled('title')) $news->title = $request->title;
-            if ($request->filled('body')) $news->body = $request->body;
-            if ($request->has('published')) $news->published = $request->boolean('published');
-            if ($request->filled('published_at')) $news->published_at = $request->published_at;
+
+            // Update title, content
+            if ($request->filled('title')) {
+                $news->title = $request->title;
+            }
+
+            if ($request->filled('content')) {
+                $news->content = $request->content;
+            }
+
+            // Handle publication toggle
+            if ($request->has('is_published')) {
+
+                $isPublished = $request->boolean('is_published');
+                $news->is_published = $isPublished;
+
+                if ($isPublished) {
+                    // Set published_at if not provided
+                    $news->published_at = $request->published_at ?? $news->published_at ?? now();
+                } else {
+                    // Unpublish → remove published_at
+                    $news->published_at = null;
+                }
+            }
+
             $news->save();
+
             DB::commit();
+
             return new NewsResource($news);
+
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('News update failed', ['err'=>$e->getMessage()]);
-            return response()->json(['success'=>false,'message'=>'Failed to update news'],500);
+            Log::error('News update failed', ['err' => $e->getMessage()]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update news'
+            ], 500);
         }
     }
 
     public function destroy($id)
     {
         $news = News::findOrFail($id);
-        if ($news->image) Storage::disk('public')->delete($news->image);
-        $news->delete();
-        return response()->json(['success'=>true,'message'=>'Deleted']);
-    }
 
+        if ($news->image) {
+            Storage::disk('public')->delete($news->image);
+        }
+
+        $news->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Deleted'
+        ]);
+    }
 }

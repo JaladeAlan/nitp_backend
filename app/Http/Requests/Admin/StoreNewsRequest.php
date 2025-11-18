@@ -9,14 +9,24 @@ use Illuminate\Http\Exceptions\HttpResponseException;
 class StoreNewsRequest extends FormRequest
 {
     public function authorize() { return true; }
+
+    protected function prepareForValidation()
+    {
+        if ($this->has('is_published')) {
+            $this->merge([
+                'is_published' => filter_var($this->is_published, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)
+            ]);
+        }
+    }
+
     public function rules()
     {
         return [
-            'title'=>'required|string|max:255',
-            'body'=>'required|string',
-            'published'=>'sometimes|boolean',
-            'published_at'=>'nullable|date',
-            'image'=>'nullable|image|max:5120'
+            'title'         => 'required|string|max:255',
+            'content'       => 'required|string',
+            'is_published'  => 'nullable|boolean',
+            'published_at'  => 'nullable|date',
+            'image'         => 'nullable|image|max:5120'
         ];
     }
 
@@ -26,7 +36,7 @@ class StoreNewsRequest extends FormRequest
             response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors'  => $validator->errors()
             ], 422)
         );
     }

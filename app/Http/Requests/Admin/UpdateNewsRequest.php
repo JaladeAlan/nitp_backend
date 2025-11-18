@@ -6,15 +6,15 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
-class StoreNewsRequest extends FormRequest
+class UpdateNewsRequest extends FormRequest
 {
     public function authorize() { return true; }
     public function rules()
     {
         return [
             'title'=>'required|string|max:255',
-            'body'=>'required|string',
-            'published'=>'sometimes|boolean',
+            'content'=>'required|string',
+            'is_published'=>'sometimes|boolean',
             'published_at'=>'nullable|date',
             'image'=>'nullable|image|max:5120'
         ];
