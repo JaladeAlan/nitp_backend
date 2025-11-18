@@ -72,6 +72,8 @@ class AdminNewsController extends Controller
 
     public function update(UpdateNewsRequest $request, $id)
     {
+        Log::info('Incoming NEWS UPDATE', $request->all());
+
         $news = News::findOrFail($id);
 
         DB::beginTransaction();
@@ -88,11 +90,11 @@ class AdminNewsController extends Controller
             }
 
             // Update title, content
-            if ($request->filled('title')) {
+            if ($request->has('title')) {
                 $news->title = $request->title;
             }
 
-            if ($request->filled('content')) {
+            if ($request->has('content')) {
                 $news->content = $request->content;
             }
 

@@ -102,7 +102,7 @@ Route::prefix('admin')
         Route::get('/news', [AdminNewsController::class, 'index']);
         Route::post('/news', [AdminNewsController::class, 'store']);
         Route::get('/news/{id}', [AdminNewsController::class, 'show']);
-        Route::put('/news/{id}', [AdminNewsController::class, 'update']);
+        Route::post('/news/{id}', [AdminNewsController::class, 'update']);
         Route::delete('/news/{id}', [AdminNewsController::class, 'destroy']);
 
         /*
@@ -113,7 +113,7 @@ Route::prefix('admin')
         Route::get('/events', [AdminEventController::class, 'index']);
         Route::post('/events', [AdminEventController::class, 'store']);
         Route::get('/events/{id}', [AdminEventController::class, 'show']);
-        Route::put('/events/{id}', [AdminEventController::class, 'update']);
+        Route::post('/events/{id}', [AdminEventController::class, 'update']);
         Route::delete('/events/{id}', [AdminEventController::class, 'destroy']);
 
         /*

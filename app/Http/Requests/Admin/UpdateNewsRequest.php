@@ -9,16 +9,18 @@ use Illuminate\Http\Exceptions\HttpResponseException;
 class UpdateNewsRequest extends FormRequest
 {
     public function authorize() { return true; }
-    public function rules()
+  public function rules()
     {
+          \Log::info("UpdateNewsRequest RAW DATA", request()->all());
         return [
-            'title'=>'required|string|max:255',
-            'content'=>'required|string',
-            'is_published'=>'sometimes|boolean',
-            'published_at'=>'nullable|date',
-            'image'=>'nullable|image|max:5120'
+            'title'         => 'sometimes|required|string|max:255',
+            'content'       => 'sometimes|required|string',
+            'is_published' => 'sometimes|in:true,false,1,0,yes,no,on,off',
+            'published_at'  => 'sometimes|nullable|date',
+            'image'         => 'sometimes|nullable|image|max:5120',
         ];
     }
+
 
     protected function failedValidation(Validator $validator)
     {

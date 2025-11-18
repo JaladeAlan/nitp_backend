@@ -33,17 +33,30 @@ class AdminEventController extends Controller
 
     public function show($id) { return new EventResource(Event::findOrFail($id)); }
 
-    public function update(UpdateEventRequest $request, $id) {
+    public function update(UpdateEventRequest $request, $id)
+    {
         $event = Event::findOrFail($id);
+
         DB::beginTransaction();
         try {
+            // Handle banner upload
             if ($request->hasFile('banner')) {
-                if ($event->banner) Storage::disk('public')->delete($event->banner);
+                if ($event->banner) {
+                    Storage::disk('public')->delete($event->banner);
+                }
                 $event->banner = $request->file('banner')->store('events','public');
             }
-            $event->fill($request->only(['title','description','start_date','end_date','location']));
+
+            // Update other fields
+            $event->title = $request->input('title', $event->title);
+            $event->description = $request->input('description', $event->description);
+            $event->location = $request->input('location', $event->location);
+            $event->start_date = $request->input('start_date', $event->start_date);
+            $event->end_date = $request->input('end_date', $event->end_date);
+
             $event->save();
             DB::commit();
+
             return new EventResource($event);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -51,6 +64,7 @@ class AdminEventController extends Controller
             return response()->json(['success'=>false,'message'=>'Failed to update event'],500);
         }
     }
+
 
     public function destroy($id) {
         $event = Event::findOrFail($id);
