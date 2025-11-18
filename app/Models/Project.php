@@ -9,16 +9,22 @@ class Project extends Model
 {
     use HasFactory;
 
+    /**
+     * The attributes that are mass assignable.
+     */
     protected $fillable = [
         'title',
         'slug',
-        'description',
-        'image',
-        'link',
-        'status', // e.g., 'ongoing', 'completed'
+        'summary',
+        'body',
+        'cover',
+        'published',
     ];
 
-    protected $hidden = [];
-
-    protected $casts = [];
+    /**
+     * Cast attributes to native types.
+     */
+    protected $casts = [
+        'published' => 'boolean',
+    ];
 }

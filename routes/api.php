@@ -133,7 +133,7 @@ Route::prefix('admin')
         Route::get('/projects', [AdminProjectController::class, 'index']);
         Route::post('/projects', [AdminProjectController::class, 'store']);
         Route::get('/projects/{id}', [AdminProjectController::class, 'show']);
-        Route::put('/projects/{id}', [AdminProjectController::class, 'update']);
+        Route::post('/projects/{id}', [AdminProjectController::class, 'update']);
         Route::delete('/projects/{id}', [AdminProjectController::class, 'destroy']);
 
         /*
@@ -152,7 +152,7 @@ Route::prefix('admin')
         */
         Route::get('/partners', [AdminPartnerController::class, 'index']);
         Route::post('/partners', [AdminPartnerController::class, 'store']);
-        Route::put('/partners/{id}', [AdminPartnerController::class, 'update']);
+        Route::post('/partners/{id}', [AdminPartnerController::class, 'update']);
         Route::delete('/partners/{id}', [AdminPartnerController::class, 'destroy']);
     });
 

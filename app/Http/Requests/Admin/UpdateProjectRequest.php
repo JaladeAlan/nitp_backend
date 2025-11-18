@@ -16,7 +16,7 @@ class UpdateProjectRequest extends FormRequest
             'summary'=>'nullable|string',
             'body'=>'nullable|string',
             'cover'=>'nullable|image|max:5120',
-            'published'=>'sometimes|boolean'
+            'published'=>'sometimes|in:true,false,1,0,yes,no,on,off',
         ];
     }
 

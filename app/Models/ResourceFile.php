@@ -11,7 +11,7 @@ class ResourceFile extends Model
 
     protected $fillable = [
         'title',
-        'file_path',
+        'file',
         'description',
     ];
 

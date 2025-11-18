@@ -6,7 +6,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
-class StorePartnerRequest extends FormRequest
+class UpdatePartnerRequest extends FormRequest
 {
     public function authorize() { return true; }
     public function rules()
