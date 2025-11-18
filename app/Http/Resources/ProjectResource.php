@@ -5,15 +5,17 @@ namespace App\Http\Resources;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
 
-class GalleryResource extends JsonResource
+class ProjectResource extends JsonResource
 {
     public function toArray($request)
     {
         return [
             'id'=>$this->id,
             'title'=>$this->title,
-            'caption'=>$this->caption,
-            'image'=> $this->image ? Storage::url($this->image) : null,
+            'summary'=>$this->summary,
+            'body'=>$this->body,
+            'cover'=>$this->cover ? Storage::url($this->cover) : null,
+            'published'=>$this->published ?? false,
             'created_at'=>$this->created_at,
         ];
     }

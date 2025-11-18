@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
-        Schema::create('resources', function (Blueprint $table) {
+        Schema::create('resource_files', function (Blueprint $table) {
             $table->id();
             $table->string('title');
             $table->string('file');
@@ -18,6 +18,6 @@ return new class extends Migration {
 
     public function down(): void
     {
-        Schema::dropIfExists('resources');
+        Schema::dropIfExists('resources_files');
     }
 };
