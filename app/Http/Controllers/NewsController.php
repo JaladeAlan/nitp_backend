@@ -12,13 +12,13 @@ class NewsController extends Controller
     public function index(Request $request)
     {
         $per = (int)$request->query('per_page',12);
-        $news = News::where('published', true)->orderBy('published_at','desc')->paginate($per);
+        $news = News::where('is_published', true)->orderBy('published_at','desc')->paginate($per);
         return NewsResource::collection($news)->response();
     }
 
     public function show($id)
     {
-        $item = News::where('published',true)->findOrFail($id);
+        $item = News::where('is_published',true)->findOrFail($id);
         return new NewsResource($item);
     }
 }

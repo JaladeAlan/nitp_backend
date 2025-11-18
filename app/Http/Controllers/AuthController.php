@@ -38,7 +38,6 @@ class AuthController extends Controller
     public function register(RegisterRequest $request)
     {
         try {
-            Log::info('REGISTER HIT');
             DB::beginTransaction();
 
             $user = User::create([
