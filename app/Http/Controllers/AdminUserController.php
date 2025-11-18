@@ -10,14 +10,15 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
-use DB;
+use Illuminate\Support\Facades\DB;
 
 class AdminUserController extends Controller
 {
     public function index(Request $request)
     {
-        $per = (int) $request->query('per_page', 20);
-        $users = User::orderBy('created_at', 'desc')->paginate($per);
+        $perPage = (int) $request->query('per_page', 20);
+        $users = User::orderBy('created_at', 'desc')->paginate($perPage);
+
         return UserResource::collection($users);
     }
 
@@ -25,15 +26,18 @@ class AdminUserController extends Controller
     {
         DB::beginTransaction();
         try {
+            $role = $request->filled('role') && $request->role === 'admin' ? User::ROLE_ADMIN : 'member';
+
             $user = User::create([
                 'name'     => $request->name,
                 'email'    => $request->email,
                 'password' => Hash::make($request->password),
-                'role'     => $request->boolean('is_admin', false) ? 'admin' : 'member',
+                'role'     => $role,
             ]);
 
             DB::commit();
             Log::info('Admin created user', ['admin' => auth('api')->id(), 'user' => $user->id]);
+
             return new UserResource($user);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -54,10 +58,17 @@ class AdminUserController extends Controller
 
         DB::beginTransaction();
         try {
-            if ($request->filled('name')) $user->name = $request->name;
-            if ($request->filled('email')) $user->email = $request->email;
-            if ($request->filled('password')) $user->password = Hash::make($request->password);
-            if ($request->has('is_admin')) $user->role = $request->boolean('is_admin') ? 'admin' : 'member';
+            if ($request->filled('name')) {
+                $user->name = $request->name;
+            }
+
+            if ($request->filled('password')) {
+                $user->password = Hash::make($request->password);
+            }
+
+            if ($request->filled('role')) {
+                $user->role = $request->role === 'admin' ? User::ROLE_ADMIN : 'member';
+            }
 
             $user->save();
             DB::commit();

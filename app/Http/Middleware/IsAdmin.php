@@ -7,14 +7,24 @@ use Illuminate\Http\Request;
 
 class IsAdmin
 {
+    /**
+     * Handle an incoming request.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \Closure  $next
+     * @return mixed
+     */
     public function handle(Request $request, Closure $next)
     {
-        $user = auth()->user();
+        $user = auth('api')->user(); // JWT-authenticated user
 
-        if (!$user || $user->role !== 'admin') {
-            return response()->json([
-                'message' => 'Unauthorized — Admin access required'
-            ], 403);
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        // Check role column in DB
+        if ($user->role !== 'admin') {
+            return response()->json(['message' => 'Forbidden: Admins only'], 403);
         }
 
         return $next($request);

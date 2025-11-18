@@ -16,6 +16,7 @@ use App\Http\Controllers\GalleryController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ResourceController;
 use App\Http\Controllers\PartnerController;
+use App\Http\Middleware\IsAdmin;
 
 /*
 |--------------------------------------------------------------------------
@@ -77,7 +78,7 @@ Route::get('/partners', [PartnerController::class, 'index']);
 */
 
 Route::prefix('admin')
-    ->middleware(['jwt.auth', 'is_admin'])
+    ->middleware(['jwt.auth', IsAdmin::class])
     ->group(function () {
 
         // Dashboard Stats
