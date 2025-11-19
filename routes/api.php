@@ -97,6 +97,7 @@ Route::prefix('admin')
         Route::get('/users/{id}', [AdminUserController::class, 'show']);
         Route::put('/users/{id}', [AdminUserController::class, 'update']);
         Route::delete('/users/{id}', [AdminUserController::class, 'destroy']);
+        Route::post('/users/create', [AdminUserController::class, 'store']); // Create user
 
         /*
         |--------------------------------------------------------------------------
