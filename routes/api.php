@@ -17,6 +17,7 @@ use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ResourceController;
 use App\Http\Controllers\PartnerController;
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\SearchController;
 use App\Http\Middleware\IsAdmin;
 
 /*
@@ -71,6 +72,8 @@ Route::get('/projects/{id}', [ProjectController::class, 'show']);
 Route::get('/resources', [ResourceController::class, 'index']);
 
 Route::get('/partners', [PartnerController::class, 'index']);
+
+Route::get('/search', [SearchController::class, 'index']);
 
 
 /*
