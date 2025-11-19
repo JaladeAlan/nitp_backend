@@ -14,7 +14,7 @@ class ProjectResource extends JsonResource
             'title'=>$this->title,
             'summary'=>$this->summary,
             'body'=>$this->body,
-            'cover'=>$this->cover ? Storage::url($this->cover) : null,
+            'cover'=>$this->cover ? asset('storage/' . $this->cover) : null,
             'published'=>$this->published ?? false,
             'created_at'=>$this->created_at,
         ];

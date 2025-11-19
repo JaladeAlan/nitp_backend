@@ -13,7 +13,7 @@ class PartnerResource extends JsonResource
             'id'=>$this->id,
             'name'=>$this->name,
             'website'=>$this->website,
-            'logo'=>$this->logo ? Storage::url($this->logo) : null,
+            'logo'=>$this->logo ? asset('storage/' . $this->logo) : null,
             'created_at'=>$this->created_at,
         ];
     }

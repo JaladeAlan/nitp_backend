@@ -16,7 +16,7 @@ class EventResource extends JsonResource
             'location'=>$this->location,
             'start_date'=>$this->start_date,
             'end_date'=>$this->end_date,
-            'banner'=>$this->banner ? Storage::url($this->banner) : null,
+            'banner'      => $this->banner ? asset('storage/' . $this->banner) : null,
             'created_at'=>$this->created_at,
         ];
     }

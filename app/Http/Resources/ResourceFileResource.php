@@ -12,7 +12,7 @@ class ResourceFileResource extends JsonResource
         return [
             'id'=>$this->id,
             'title'=>$this->title,
-            'file'=> $this->file ? Storage::url($this->file) : null,
+            'file'=> $this->file ? asset('storage/' . $this->file) : null,
             'description'=>$this->description,
             'created_at'=>$this->created_at,
         ];

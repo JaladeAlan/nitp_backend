@@ -13,7 +13,7 @@ class GalleryResource extends JsonResource
             'id'=>$this->id,
             'title'=>$this->title,
             'caption'=>$this->caption,
-            'image'=> $this->image ? Storage::url($this->image) : null,
+            'image'=> $this->image  ? asset('storage/' . $this->image) : null,
             'created_at'=>$this->created_at,
         ];
     }
