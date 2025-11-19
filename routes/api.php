@@ -16,6 +16,7 @@ use App\Http\Controllers\GalleryController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ResourceController;
 use App\Http\Controllers\PartnerController;
+use App\Http\Controllers\ContactController;
 use App\Http\Middleware\IsAdmin;
 
 /*
@@ -53,6 +54,7 @@ Route::prefix('auth')->group(function () {
 | PUBLIC CONTENT ROUTES
 |--------------------------------------------------------------------------
 */
+Route::post('/contact', [ContactController::class, 'send']);
 
 Route::get('/news', [NewsController::class, 'index']);
 Route::get('/news/{id}', [NewsController::class, 'show']);
@@ -83,6 +85,8 @@ Route::prefix('admin')
 
         // Dashboard Stats
         Route::get('/dashboard/stats', [AdminDashboardController::class, 'stats']);
+        Route::get('/messages', [ContactController::class, 'index']);
+        Route::get('/messages/{id}', [ContactController::class, 'show']);
 
         /*
         |--------------------------------------------------------------------------
