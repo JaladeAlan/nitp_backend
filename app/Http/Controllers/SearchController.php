@@ -35,13 +35,13 @@ class SearchController extends Controller
                     'type' => 'project',
                     'title' => $project->title,
                     'summary' => $project->summary,
-                    'cover' => $project->cover,
+                    'cover' => $project->cover ? asset('storage/' . $project->cover) : null,
                 ];
             });
 
         // Search Events
         $events = Event::where('title', 'like', "%{$query}%")
-            ->orWhere('description', 'like', "%{$query}%")
+            ->orWhere('description', 'like', "%{$query}%")  
             ->orWhere('location', 'like', "%{$query}%")
             ->get()
             ->map(function ($event) {
@@ -53,7 +53,7 @@ class SearchController extends Controller
                     'location' => $event->location,
                     'start_date' => $event->start_date,
                     'end_date' => $event->end_date,
-                    'banner' => $event->banner,
+                    'banner' => $event->banner ? asset('storage/' . $event->banner) : null,
                 ];
             });
 
@@ -67,7 +67,7 @@ class SearchController extends Controller
                     'type' => 'news',
                     'title' => $item->title,
                     'summary' => $item->content,
-                    'image' => $item->image,
+                    'image' => $item->image ? asset('storage/'.$item->image) : null,
                 ];
             });
 
