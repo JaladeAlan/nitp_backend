@@ -1,0 +1,1065 @@
+openapi: 3.0.3
+info:
+  title: NITP Oyo State API
+  version: 1.0.0
+  description: |
+    REST API for the Nigerian Institute of Town Planners — Oyo State Chapter.
+    Covers public content (news, events, projects, partners, gallery, resources),
+    authentication (JWT), contact form, search and administrative CRUD endpoints.
+servers:
+  - url: http://localhost:8000/api
+    description: Local development
+  - url:  
+    description: Production
+
+tags:
+  - name: Auth
+  - name: News
+  - name: Events
+  - name: Projects
+  - name: Partners
+  - name: Gallery
+  - name: Resources
+  - name: Contact
+  - name: Search
+  - name: Admin
+  - name: Users
+
+paths:
+  # AUTH
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccess'
+        '422':
+          description: Validation error
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login and receive JWT token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccess'
+        '401':
+          description: Invalid credentials
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout (invalidate token)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logged out
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Get current authenticated user
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResource'
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh JWT using refresh token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+      responses:
+        '200':
+          description: New token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+
+  /auth/email/verify:
+    post:
+      tags: [Auth]
+      summary: Verify email using code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, verification_code]
+              properties:
+                email: { type: string }
+                verification_code: { type: string }
+      responses:
+        '200': { description: Verified }
+
+  /auth/email/resend:
+    post:
+      tags: [Auth]
+      summary: Resend verification code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string }
+      responses:
+        '200': { description: Sent }
+
+  /auth/password/request:
+    post:
+      tags: [Auth]
+      summary: Request password reset code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string }
+      responses:
+        '200': { description: Reset code sent }
+
+  /auth/password/verify:
+    post:
+      tags: [Auth]
+      summary: Verify password reset code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, reset_code]
+              properties:
+                email: { type: string }
+                reset_code: { type: string }
+      responses:
+        '200': { description: Code verified }
+
+  /auth/password/reset:
+    post:
+      tags: [Auth]
+      summary: Reset password after verification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '200': { description: Password reset }
+
+  /auth/password/change:
+    post:
+      tags: [Auth]
+      summary: Change password (authenticated)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [current_password, new_password, new_password_confirmation]
+              properties:
+                current_password: { type: string }
+                new_password: { type: string }
+                new_password_confirmation: { type: string }
+      responses:
+        '200': { description: Password changed }
+
+  # PUBLIC: NEWS
+  /news:
+    get:
+      tags: [News]
+      summary: Get paginated published news
+      parameters:
+        - in: query
+          name: per_page
+          schema: { type: integer, default: 12 }
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+      responses:
+        '200':
+          description: Paginated news list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedNews'
+
+  /news/{id}:
+    get:
+      tags: [News]
+      summary: Get single published news item
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Single news resource
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewsResource'
+
+  # PUBLIC: EVENTS
+  /events:
+    get:
+      tags: [Events]
+      summary: Get paginated events
+      parameters:
+        - in: query
+          name: per_page
+          schema: { type: integer, default: 12 }
+      responses:
+        '200':
+          description: Paginated events
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEvents'
+
+  /events/{id}:
+    get:
+      tags: [Events]
+      summary: Get single event
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Event resource
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventResource'
+
+  # PUBLIC: PROJECTS
+  /projects:
+    get:
+      tags: [Projects]
+      summary: Get paginated projects
+      parameters:
+        - in: query
+          name: per_page
+          schema: { type: integer, default: 12 }
+      responses:
+        '200':
+          description: Paginated projects
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProjects'
+
+  /projects/{id}:
+    get:
+      tags: [Projects]
+      summary: Get single project
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Project resource
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectResource'
+
+  # PUBLIC: PARTNERS
+  /partners:
+    get:
+      tags: [Partners]
+      summary: Get partners list
+      responses:
+        '200':
+          description: Partner list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnersList'
+
+  # PUBLIC: GALLERY
+  /gallery:
+    get:
+      tags: [Gallery]
+      summary: Get gallery list
+      responses:
+        '200':
+          description: Gallery items
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GalleryList'
+
+  /gallery/{id}:
+    get:
+      tags: [Gallery]
+      summary: Get single gallery item
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Gallery item
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GalleryItem'
+
+  # PUBLIC: RESOURCES
+  /resources:
+    get:
+      tags: [Resources]
+      summary: Get resources list
+      responses:
+        '200':
+          description: Resource list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResourceList'
+
+  # SEARCH
+  /search:
+    get:
+      tags: [Search]
+      summary: Search across news/events/projects
+      parameters:
+        - in: query
+          name: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items: { type: object }
+
+  # CONTACT
+  /contact:
+    post:
+      tags: [Contact]
+      summary: Submit contact message
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactRequest'
+      responses:
+        '200':
+          description: Message received
+
+  # ADMIN (jwt + is_admin)
+  /admin/dashboard/stats:
+    get:
+      tags: [Admin]
+      summary: Admin dashboard statistics
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Dashboard metrics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users: { type: integer }
+                  news: { type: integer }
+                  events: { type: integer }
+
+  # ADMIN - NEWS CRUD
+  /admin/news:
+    get:
+      tags: [Admin]
+      summary: Get all news (admin)
+      security:
+        - bearerAuth: []
+      responses:
+        '200': { description: OK }
+    post:
+      tags: [Admin]
+      summary: Create news
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                content: { type: string }
+                image: { type: string, format: binary }
+                is_published: { type: boolean }
+      responses:
+        '201': { description: Created }
+
+  /admin/news/{id}:
+    get:
+      tags: [Admin]
+      summary: Get news item (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: OK }
+    post:
+      tags: [Admin]
+      summary: Update news item (admin)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                content: { type: string }
+                image: { type: string, format: binary }
+                is_published: { type: boolean }
+      responses:
+        '200': { description: Updated }
+    delete:
+      tags: [Admin]
+      summary: Delete news (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: Deleted }
+
+  # ADMIN - EVENTS CRUD
+  /admin/events:
+    get:
+      tags: [Admin]
+      summary: Get all events (admin)
+      security:
+        - bearerAuth: []
+      responses:
+        '200': { description: OK }
+    post:
+      tags: [Admin]
+      summary: Create event
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                description: { type: string }
+                location: { type: string }
+                start_date: { type: string, format: date-time }
+                end_date: { type: string, format: date-time }
+                banner: { type: string, format: binary }
+      responses:
+        '201': { description: Created }
+
+  /admin/events/{id}:
+    get:
+      tags: [Admin]
+      summary: Get event (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: OK }
+    post:
+      tags: [Admin]
+      summary: Update event (admin)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                description: { type: string }
+                location: { type: string }
+                start_date: { type: string, format: date-time }
+                end_date: { type: string, format: date-time }
+                banner: { type: string, format: binary }
+      responses:
+        '200': { description: Updated }
+    delete:
+      tags: [Admin]
+      summary: Delete event (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: Deleted }
+
+  # ADMIN - GALLERY
+  /admin/gallery:
+    get:
+      tags: [Admin]
+      summary: List gallery items
+      security:
+        - bearerAuth: []
+      responses:
+        '200': { description: OK }
+    post:
+      tags: [Admin]
+      summary: Upload gallery item
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                type: { type: string, enum: [image, video] }
+                file: { type: string, format: binary }
+      responses:
+        '201': { description: Uploaded }
+
+  /admin/gallery/{id}:
+    delete:
+      tags: [Admin]
+      summary: Delete gallery item
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: Deleted }
+
+  # ADMIN - PROJECTS
+  /admin/projects:
+    get:
+      tags: [Admin]
+      summary: List projects (admin)
+      security:
+        - bearerAuth: []
+      responses:
+        '200': { description: OK }
+    post:
+      tags: [Admin]
+      summary: Create project
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                summary: { type: string }
+                content: { type: string }
+                image: { type: string, format: binary }
+      responses:
+        '201': { description: Created }
+
+  /admin/projects/{id}:
+    get:
+      tags: [Admin]
+      summary: Get project (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: OK }
+    post:
+      tags: [Admin]
+      summary: Update project (admin)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                summary: { type: string }
+                content: { type: string }
+                image: { type: string, format: binary }
+      responses:
+        '200': { description: Updated }
+    delete:
+      tags: [Admin]
+      summary: Delete project (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: Deleted }
+
+  # ADMIN - RESOURCES
+  /admin/resources:
+    get:
+      tags: [Admin]
+      summary: List resources (admin)
+      security:
+        - bearerAuth: []
+      responses:
+        '200': { description: OK }
+    post:
+      tags: [Admin]
+      summary: Upload resource (file)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                file: { type: string, format: binary }
+      responses:
+        '201': { description: Uploaded }
+
+  /admin/resources/{id}:
+    delete:
+      tags: [Admin]
+      summary: Delete resource
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: Deleted }
+
+  # ADMIN - PARTNERS
+  /admin/partners:
+    get:
+      tags: [Admin]
+      summary: List partners (admin)
+      security:
+        - bearerAuth: []
+      responses:
+        '200': { description: OK }
+    post:
+      tags: [Admin]
+      summary: Create partner (admin)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                website: { type: string }
+                logo: { type: string, format: binary }
+      responses:
+        '201': { description: Created }
+
+  /admin/partners/{id}:
+    post:
+      tags: [Admin]
+      summary: Update partner (admin)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                website: { type: string }
+                logo: { type: string, format: binary }
+      responses:
+        '200': { description: Updated }
+    delete:
+      tags: [Admin]
+      summary: Delete partner
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: Deleted }
+
+  # ADMIN - USERS
+  /admin/users:
+    get:
+      tags: [Admin, Users]
+      summary: List users (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer }
+        - in: query
+          name: per_page
+          schema: { type: integer }
+      responses:
+        '200': { description: OK }
+
+  /admin/users/create:
+    post:
+      tags: [Admin, Users]
+      summary: Create user (admin)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                email: { type: string }
+                role: { type: string, enum: [admin, member] }
+      responses:
+        '201': { description: Created }
+
+  /admin/users/{id}:
+    get:
+      tags: [Admin, Users]
+      summary: Get user (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: OK }
+    put:
+      tags: [Admin, Users]
+      summary: Update user (admin)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                email: { type: string }
+                role: { type: string }
+      responses:
+        '200': { description: Updated }
+    delete:
+      tags: [Admin, Users]
+      summary: Delete user (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: Deleted }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # AUTH
+    RegisterRequest:
+      type: object
+      required: [name, email, password, password_confirmation]
+      properties:
+        name: { type: string }
+        email: { type: string }
+        password: { type: string }
+        password_confirmation: { type: string }
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string }
+        password: { type: string }
+
+    AuthSuccess:
+      type: object
+      properties:
+        token: { type: string }
+        user:
+          $ref: '#/components/schemas/UserResource'
+
+    ResetPasswordRequest:
+      type: object
+      required: [email, password, password_confirmation]
+      properties:
+        email: { type: string }
+        password: { type: string }
+        password_confirmation: { type: string }
+
+    # USER / RESOURCE
+    UserResource:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        email: { type: string }
+        role: { type: string }
+        email_verified_at: { type: string, format: date-time }
+        created_at: { type: string, format: date-time }
+
+    # NEWS
+    NewsResource:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        slug: { type: string }
+        content: { type: string }
+        image: { type: string }
+        is_published: { type: boolean }
+        published_at: { type: string, format: date-time }
+        created_at: { type: string, format: date-time }
+
+    PaginatedNews:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/NewsResource'
+        links:
+          type: object
+        meta:
+          type: object
+
+    # EVENTS
+    EventResource:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        description: { type: string }
+        location: { type: string }
+        start_date: { type: string, format: date-time }
+        end_date: { type: string, format: date-time }
+        banner: { type: string }
+        gallery:
+          type: array
+          items:
+            $ref: '#/components/schemas/GalleryItem'
+        created_at: { type: string, format: date-time }
+
+    PaginatedEvents:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventResource'
+        links: { type: object }
+        meta: { type: object }
+
+    # PROJECTS
+    ProjectResource:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        summary: { type: string }
+        content: { type: string }
+        image: { type: string }
+        created_at: { type: string, format: date-time }
+
+    PaginatedProjects:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectResource'
+        links: { type: object }
+        meta: { type: object }
+
+    # PARTNERS
+    PartnerResource:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        website: { type: string }
+        logo: { type: string }
+        created_at: { type: string, format: date-time }
+
+    PartnersList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartnerResource'
+
+    # GALLERY
+    GalleryItem:
+      type: object
+      properties:
+        id: { type: integer }
+        type: { type: string, enum: [image, video] }
+        url: { type: string }
+        title: { type: string }
+        created_at: { type: string, format: date-time }
+
+    GalleryList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/GalleryItem'
+
+    # RESOURCES
+    ResourceItem:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        file: { type: string }
+        created_at: { type: string, format: date-time }
+
+    ResourceList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResourceItem'
+
+    # CONTACT
+    ContactRequest:
+      type: object
+      required: [name, email, message]
+      properties:
+        name: { type: string }
+        email: { type: string }
+        message: { type: string }
+
+    # SEARCH
+    SearchResult:
+      type: object
+      properties:
+        type: { type: string }
+        id: { type: integer }
+        title: { type: string }
+        snippet: { type: string }
+
